@@ -75,7 +75,18 @@ export function useOnline(serverUrl: string): OnlineApi {
     openedWith.current = url;
     setConnecting(true);
     leaving.current = false;
-    const sock = new WebSocket(url);
+    let sock: WebSocket;
+    try {
+      sock = new WebSocket(url);
+    } catch {
+      setConnecting(false);
+      setError(
+        isStaticDeployment()
+          ? `Impossible d'ouvrir une connexion vers ${shortServerLabel(url)}. Le solo fonctionne sans serveur ; pour le multijoueur, renseignez l'adresse du serveur de jeu ci-dessous.`
+          : `Connexion impossible vers ${shortServerLabel(url)}.`,
+      );
+      return;
+    }
     ws.current = sock;
     sock.onopen = () => {
       setConnected(true);

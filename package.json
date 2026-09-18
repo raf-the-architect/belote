@@ -10,7 +10,8 @@
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "npm run build && npm start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/engine.test.ts"
+    "test": "tsx tests/engine.test.ts",
+    "build:pages": "vite build --base=./ && node scripts/build-pages.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

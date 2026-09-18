@@ -145,6 +145,10 @@ export function HandFan({
     if (!el) return;
     const update = () => setWidth(el.clientWidth);
     update();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();

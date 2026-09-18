@@ -21,8 +21,10 @@ Autres commandes :
 
 ```bash
 npm run typecheck  # tsc --noEmit
+npm run build:pages  # build statique + dossier docs/ prêt pour GitHub Pages
 npm test           # 20 tests moteur (règles, belote, dedans, redonne, illégalité)
 npx tsx tests/ui-smoke.tsx        # test UI jsdom : lobby → manche → décompte → victoire
+npx tsx tests/static-host.test.tsx  # hébergement statique : solo jouable, online guidé
 npx tsx scripts/ws-smoke.ts       # smoke test multijoueur (rooms + vues par siège)
 npx tsx scripts/abtest.ts         # force des bots facile / normal / expert
 ```
@@ -64,6 +66,28 @@ filtrée (`buildView`) — les cartes des adversaires ne quittent jamais le serv
 4 caractères, hôte (niveau, cible, lancement), places libres remplies par des bots, déconnexion
 reprise par un bot puis reprise de session (`resume` + reconnexion automatique), chat, compte à
 rebours de 7 s avant la manche suivante.
+
+## Tester sur téléphone, publier en statique
+
+Le jeu **solo ne demande aucun serveur** : c'est une page statique. Le mode en ligne a besoin du
+petit serveur Node (WebSocket) — depuis l'écran *Multijoueur*, on peut saisir son adresse
+(`wss://…/ws`), elle est retenue pour les visites suivantes.
+
+| Voie | Commande | Où ça se publie |
+|---|---|---|
+| GitHub Pages (branche + dossier `/docs`) | `npm run build:pages` puis commit de `docs/` | `https://<compte>.github.io/<dépôt>/` |
+| GitHub Actions | workflow `.github/workflows/pages.yml` (branche `main`) | idem, à chaque push |
+| Branche `gh-pages` | workflow `.github/workflows/gh-pages-branch.yml` | idem |
+| N'importe quel hébergeur statique | `npm run build:pages` puis envoi de `docs/` | Netlify, Vercel, Cloudflare Pages… |
+| Réseau local (pour le mode en ligne) | `npm run dev` puis `http://<ip-du-pc>:3000` | le serveur de jeu sert aussi la page |
+
+Le build utilise des **chemins relatifs** (`base: './'`) : il fonctionne à la racine d'un domaine
+comme dans un sous-dossier. Icônes et manifeste sont inclus — sur iPhone comme sur Android, on peut
+« Ajouter à l'écran d'accueil » et retrouver le jeu en plein écran.
+
+Pour jouer en ligne depuis un hébergement statique, un serveur de jeu doit tourner quelque part
+(PC, VPS, Render, Fly.io…) : `npm start` (ou `npm run dev`) puis, dans l'écran Multijoueur, saisir
+l'adresse `ws://` ou `wss://` de ce serveur.
 
 ## Structure
 
