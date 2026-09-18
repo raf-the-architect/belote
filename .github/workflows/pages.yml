@@ -31,6 +31,12 @@ jobs:
 
       - run: npm ci
 
+      # Active GitHub Pages automatiquement si ce n'est pas déjà fait
+      # (évite d'avoir à toucher aux réglages du dépôt)
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - name: Vérifications
         run: |
           npm run typecheck
