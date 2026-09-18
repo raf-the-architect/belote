@@ -6,15 +6,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Action, BotLevel } from '../game/types';
 import type { GameView } from '../game/views';
 import type { ClientMessage, RoomInfo, ServerMessage } from '../net/protocol';
+import { isStaticDeployment, shortServerLabel } from '../net/endpoint';
 
 const SESSION_KEY = 'belote-tunisie:session';
 
 interface SavedSession { playerId: string; code: string }
-
-function wsUrl(): string {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${proto}://${location.host}/ws`;
-}
 
 export interface OnlineApi {
   connecting: boolean;
@@ -38,11 +34,17 @@ export interface OnlineApi {
   sendChat: (text: string) => void;
   leave: () => void;
   resume: () => void;
+  retry: () => void;
   clearError: () => void;
+  /** adresse du serveur réellement utilisée */
+  serverUrl: string;
 }
 
-export function useOnline(): OnlineApi {
+export function useOnline(serverUrl: string): OnlineApi {
   const ws = useRef<WebSocket | null>(null);
+  const target = useRef(serverUrl);
+  const openedWith = useRef('');
+  const wanted = useRef(false);
   const queue = useRef<ClientMessage[]>([]);
   const attempts = useRef(0);
   const leaving = useRef(false);
@@ -68,14 +70,12 @@ export function useOnline(): OnlineApi {
     else queue.current.push(msg);
   }, []);
 
-  const connect = useCallback((after?: () => void) => {
-    if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) {
-      after?.();
-      return;
-    }
+  const open = useCallback((after?: () => void) => {
+    const url = target.current;
+    openedWith.current = url;
     setConnecting(true);
     leaving.current = false;
-    const sock = new WebSocket(wsUrl());
+    const sock = new WebSocket(url);
     ws.current = sock;
     sock.onopen = () => {
       setConnected(true);
@@ -112,9 +112,12 @@ export function useOnline(): OnlineApi {
           break;
       }
     };
+    sock.onerror = () => setConnecting(false);
     sock.onclose = () => {
       setConnected(false);
       setConnecting(false);
+      // le joueur a changé de serveur : une nouvelle connexion est déjà en route
+      if (openedWith.current !== target.current) return;
       if (leaving.current) return;
       // reconnexion automatique si une session existe
       let saved: SavedSession | null = null;
@@ -125,12 +128,50 @@ export function useOnline(): OnlineApi {
       if (saved && attempts.current < 6) {
         attempts.current++;
         setTimeout(() => {
-          connect(() => send({ t: 'resume', playerId: saved!.playerId, code: saved!.code }));
+          open(() => send({ t: 'resume', playerId: saved!.playerId, code: saved!.code }));
         }, 700 * attempts.current);
+        return;
       }
+      // échec franc : on explique quoi faire plutôt que de laisser « déconnecté »
+      const label = shortServerLabel(target.current);
+      setError(
+        isStaticDeployment() && !saved
+          ? `Aucun serveur de jeu joignable sur ${label}. Cette page est hébergée en statique : le solo fonctionne entièrement, et pour le multijoueur renseignez l'adresse du serveur ci-dessous.`
+          : `Connexion au serveur impossible (${label}). Vérifiez que le serveur de jeu tourne, puis réessayez.`,
+      );
     };
-    sock.onerror = () => setConnecting(false);
+    // si la tentative échoue sans même ouvrir (hôte inconnu, hors ligne)
+    setTimeout(() => {
+      if (!leaving.current && sock.readyState === WebSocket.CONNECTING && openedWith.current === target.current) {
+        setConnecting(false);
+      }
+    }, 6000);
   }, [send]);
+
+  const connect = useCallback((after?: () => void) => {
+    wanted.current = true;
+    if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) {
+      if (openedWith.current === target.current) { after?.(); return; }
+      try { ws.current.close(); } catch { /* ignore */ }
+    }
+    attempts.current = 0;
+    setError(null);
+    open(after);
+  }, [open]);
+
+  // changement d'adresse de serveur : on rebascule la connexion
+  useEffect(() => {
+    if (target.current === serverUrl) return;
+    target.current = serverUrl;
+    if (!wanted.current) return;
+    const sock = ws.current;
+    if (sock) { try { sock.close(); } catch { /* ignore */ } }
+    ws.current = null;
+    setConnected(false);
+    attempts.current = 0;
+    setError(null);
+    open();
+  }, [serverUrl, open]);
 
   const create = useCallback((name: string, level: BotLevel, target: number) => {
     connect(() => send({ t: 'create', name, level, target }));
@@ -152,6 +193,7 @@ export function useOnline(): OnlineApi {
 
   const leave = useCallback(() => {
     leaving.current = true;
+    wanted.current = false;
     try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
     setHasSaved(false);
     ws.current?.close();
@@ -178,5 +220,7 @@ export function useOnline(): OnlineApi {
     restart: () => send({ t: 'restart' }),
     sendChat: (text) => send({ t: 'chat', text }),
     clearError: () => setError(null),
+    retry: () => connect(),
+    serverUrl: target.current,
   };
 }

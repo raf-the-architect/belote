@@ -12,6 +12,7 @@ import { RulesScreen } from './ui/screens/RulesScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { useLocalGame } from './ui/useLocalGame';
 import { useOnline } from './ui/useOnline';
+import { resolveServerUrl, setStoredServerUrl, normalizeServerUrl } from './net/endpoint';
 import { useOnlineFx } from './ui/useOnlineFx';
 import { loadSettings, saveSettings, type Settings } from './ui/settings';
 import { setSoundEnabled, setVolume, unlockAudio } from './ui/sound';
@@ -26,10 +27,17 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
   const [screen, setScreen] = useState<Screen>('start');
   const [urlSeed, setUrlSeed] = useState<number | undefined>(undefined);
+  const [serverUrl, setServerUrl] = useState<string>(() => resolveServerUrl());
+
+  const changeServer = useCallback((raw: string) => {
+    const url = normalizeServerUrl(raw);
+    setStoredServerUrl(url);
+    setServerUrl(url || resolveServerUrl());
+  }, []);
   const [modal, setModal] = useState<Modal>(null);
   const [session, setSession] = useState(0);
   const local = useLocalGame(settings);
-  const online = useOnline();
+  const online = useOnline(serverUrl);
   const onlineFx = useOnlineFx(online.view, settings.vibrate);
   const [autoNextIn, setAutoNextIn] = useState<number | null>(null);
 
@@ -249,6 +257,10 @@ export default function App() {
           target={online.room?.target ?? settings.target}
           onTarget={online.setTarget}
           connecting={online.connecting}
+          connected={online.connected}
+          serverUrl={serverUrl}
+          onServer={changeServer}
+          onRetry={online.retry}
         />
       )}
     </div>

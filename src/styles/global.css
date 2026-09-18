@@ -53,6 +53,13 @@ body {
 
 button { font: inherit; color: inherit; }
 
+/* tactile : pas de délai de double-tap, pas de surbrillance bleue */
+button, input, select, a, .card, .chip, .suit-badge, .level-card, .target-row {
+  touch-action: manipulation;
+}
+/* 16px minimum : iOS zoome la page au focus en dessous */
+input, select, textarea { font-size: 16px; }
+
 .app {
   position: relative;
   height: 100dvh;
@@ -313,6 +320,7 @@ button { font: inherit; color: inherit; }
   background: rgba(0, 0, 0, 0.28);
   color: #f6f1e6;
   font: inherit;
+  font-size: 16px;
 }
 .input--code { text-transform: uppercase; letter-spacing: 0.35em; text-align: center; font-weight: 700; font-size: 20px; }
 .input-row { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
@@ -603,7 +611,11 @@ button { font: inherit; color: inherit; }
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  padding: max(6px, env(safe-area-inset-top)) 6px 0;
+  padding:
+    max(6px, env(safe-area-inset-top))
+    max(6px, env(safe-area-inset-right))
+    max(6px, env(safe-area-inset-bottom))
+    max(6px, env(safe-area-inset-left));
   gap: 6px;
   overflow: hidden;
 }

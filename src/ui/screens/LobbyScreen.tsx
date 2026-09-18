@@ -98,7 +98,8 @@ export function SoloLobby({
 }
 
 export function OnlineLobby({
-  room, you, name, onName, onReady, onStart, onLeave, onCreate, onJoin, error, chat, onChat, level, onLevel, target, onTarget, connecting,
+  room, you, name, onName, onReady, onStart, onLeave, onCreate, onJoin, error, chat, onChat, level, onLevel, target, onTarget,
+  connecting, connected, serverUrl, onServer, onRetry,
 }: {
   room: RoomInfo | null;
   you: string | null;
@@ -117,8 +118,14 @@ export function OnlineLobby({
   target: number;
   onTarget: (t: number) => void;
   connecting: boolean;
+  connected: boolean;
+  serverUrl: string;
+  onServer: (url: string) => void;
+  onRetry: () => void;
 }) {
   const [code, setCode] = useState('');
+  const [server, setServer] = useState(serverUrl);
+  useEffect(() => { setServer(serverUrl); }, [serverUrl]);
   const [msg, setMsg] = useState('');
   const isHost = !!room && room.hostId === you;
   const me = room?.players.find((p) => p.id === you);
@@ -142,6 +149,40 @@ export function OnlineLobby({
         <section className="lobby__block">
           <h3>Votre nom</h3>
           <input className="input" value={name} placeholder="Votre prénom" maxLength={16} onChange={(e) => onName(e.target.value)} />
+        </section>
+
+        <section className="lobby__block lobby__block--server">
+          <h3>Serveur de jeu</h3>
+          <p className="lobby__note">
+            Le mode multijoueur relie les joueurs par un petit serveur de jeu (WebSocket).
+            {' '}<b>Jouer contre les bots ne demande aucun serveur.</b>
+          </p>
+          <div className={`server-state ${connected ? 'is-on' : connecting ? 'is-wait' : 'is-off'}`}>
+            <span className="server-state__dot" aria-hidden />
+            {connected ? 'Connecté au serveur' : connecting ? 'Connexion en cours…' : 'Serveur non joignable'}
+          </div>
+          <div className="join-row">
+            <input
+              className="input"
+              value={server}
+              placeholder="wss://mon-serveur.exemple/ws"
+              spellCheck={false}
+              autoComplete="off"
+              onChange={(e) => setServer(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn btn--gold"
+              onClick={() => { onServer(server.trim()); onRetry(); }}
+              disabled={connecting}
+            >
+              Relier
+            </button>
+          </div>
+          <p className="lobby__hint">
+            Adresse du serveur Node du jeu (par exemple <code>ws://192.168.1.20:3000</code> sur votre réseau,
+            ou l'adresse d'un serveur hébergé). Elle est retenue pour les prochaines visites.
+          </p>
         </section>
 
         <section className="lobby__block">
