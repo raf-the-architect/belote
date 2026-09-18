@@ -1,0 +1,20 @@
+{
+  "name": "Belote Tunisie — Belote Classique, règles tunisiennes",
+  "short_name": "Belote",
+  "description": "Belote classique (règles tunisiennes) : 4 joueurs, 1 humain et 3 bots, ou multijoueur en ligne. 8 plis par manche, contrat, Belote-Rebelote, dedans.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#06110d",
+  "theme_color": "#0a2a1e",
+  "categories": ["games", "cards"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
